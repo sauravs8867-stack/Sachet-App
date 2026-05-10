@@ -25,8 +25,7 @@ const upload = multer({ storage: storage });
 
 // --- DATABASE CONNECTION ---
 // Agar Render pe MONGO_URI variable hai toh wo, warna local DB
-const dbURI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sachetDB';
-
+const dbURI = 'mongodb+srv://atul:sachet123@cluster0.mongodb.net/sachetDB?retryWrites=true&w=majority';
 mongoose.connect(dbURI)
     .then(() => console.log("Sachet DB Connected Successfully!"))
     .catch(err => console.log("DB Connection Error: ", err));
