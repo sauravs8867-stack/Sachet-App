@@ -6,11 +6,12 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const app = express();
 
-// --- CLOUDINARY CONFIG ---
+// --- CONFIGURATION ---
+// Render pe process.env use hoga, local pe hardcoded
 cloudinary.config({ 
-  cloud_name: 'dljupzine', 
-  api_key: '658533244982168', 
-  api_secret: 'uEzzKO4fgoBjKJgUsMSGKZyH1N0' 
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dljupzine', 
+  api_key: process.env.CLOUDINARY_API_KEY || '658533244982168', 
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'uEzzKO4fgoBjKJgUsMSGKZyH1N0' 
 });
 
 const storage = new CloudinaryStorage({
@@ -22,8 +23,13 @@ const storage = new CloudinaryStorage({
 });
 const upload = multer({ storage: storage });
 
-// --- DATABASE ---
-mongoose.connect('mongodb://127.0.0.1:27017/sachetDB');
+// --- DATABASE CONNECTION ---
+// Agar Render pe MONGO_URI variable hai toh wo, warna local DB
+const dbURI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/sachetDB';
+
+mongoose.connect(dbURI)
+    .then(() => console.log("Sachet DB Connected Successfully!"))
+    .catch(err => console.log("DB Connection Error: ", err));
 
 const itemSchema = new mongoose.Schema({
     name: String,
@@ -39,8 +45,12 @@ app.use(express.static("public"));
 
 // --- ROUTES ---
 app.get('/', async (req, res) => {
-    const items = await Item.find().sort({ expiryDate: 1 });
-    res.render('index', { items: items });
+    try {
+        const items = await Item.find().sort({ expiryDate: 1 });
+        res.render('index', { items: items });
+    } catch (err) {
+        res.status(500).send("Database se data nahi aa raha.");
+    }
 });
 
 app.post('/add', upload.single('image'), async (req, res) => {
@@ -54,7 +64,7 @@ app.post('/add', upload.single('image'), async (req, res) => {
         await newItem.save();
         res.redirect('/');
     } catch (err) {
-        res.send("Error: Photo upload fail ho gaya!");
+        res.send("Error: Photo upload ya data save fail ho gaya!");
     }
 });
 
@@ -63,4 +73,6 @@ app.post('/delete', async (req, res) => {
     res.redirect('/');
 });
 
-app.listen(3000, () => console.log("Sachet Final Live: http://localhost:3000"));
+// --- PORT CONFIG (Very Important for Render) ---
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Sachet App is running on port ${PORT}`));
