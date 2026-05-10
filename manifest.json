@@ -1,0 +1,15 @@
+{
+  "name": "Sachet Smart Inventory",
+  "short_name": "Sachet",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#4834d4",
+  "theme_color": "#4834d4",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/1162/1162456.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

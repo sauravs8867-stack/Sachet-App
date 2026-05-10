@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sachet Pro - Smart Inventory</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        :root { --primary: #4834d4; --danger: #eb4d4b; --success: #6ab04c; --glass: rgba(255, 255, 255, 0.95); }
+        body { font-family: 'Poppins', sans-serif; background: #f1f2f6; margin: 0; padding: 15px; }
+        .container { max-width: 500px; margin: auto; }
+        .card { background: var(--glass); padding: 20px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h1 { text-align: center; color: var(--primary); margin: 0; font-size: 1.8rem; }
+        
+        /* Inputs & Buttons */
+        input, .btn { width: 100%; padding: 12px; margin: 8px 0; border-radius: 12px; border: 1px solid #ddd; box-sizing: border-box; font-family: inherit; }
+        .btn-primary { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; }
+        .btn-scan { background: #686de0; color: white; border: none; margin-bottom: 10px; cursor: pointer; }
+        
+        /* Mic & Camera UI */
+        .action-row { display: flex; gap: 10px; justify-content: center; margin: 15px 0; }
+        .round-btn { width: 55px; height: 55px; border-radius: 50%; border: none; color: white; cursor: pointer; font-size: 20px; transition: 0.3s; }
+        .mic { background: var(--danger); }
+        .listening { background: var(--success); animation: pulse 1.5s infinite; }
+
+        /* Item Row */
+        .item-card { background: white; padding: 12px; border-radius: 18px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; border-left: 6px solid var(--primary); }
+        .prod-img { width: 65px; height: 65px; border-radius: 12px; object-fit: cover; background: #eee; }
+        .urgent { border-left-color: var(--danger); background: #fff5f5; }
+
+        @keyframes pulse { 0% {box-shadow: 0 0 0 0 rgba(106, 176, 76, 0.4);} 70% {box-shadow: 0 0 0 15px rgba(106, 176, 76, 0);} 100% {box-shadow: 0 0 0 0 rgba(106, 176, 76, 0);} }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h1>Sachet (सचेत)</h1>
+        
+        <div class="action-row">
+            <button class="round-btn mic" id="micBtn" onclick="startVoice()">🎤</button>
+            <button class="round-btn" style="background:#686de0" onclick="toggleScanner()">📷</button>
+        </div>
+        <p id="status" style="text-align:center; font-size:0.8rem; color:#888;">Tap Mic to speak "Add Milk"</p>
+
+        <div id="reader" style="display:none; border-radius:15px; overflow:hidden; margin-bottom:10px;"></div>
+
+        <form action="/add" method="POST" enctype="multipart/form-data">
+            <input type="text" name="name" id="pName" placeholder="🛒 Product Name" required>
+            <input type="text" name="quantity" placeholder="📦 Quantity (e.g. 2kg)">
+            <input type="date" name="expiry" required>
+            
+            <label style="display:block; margin:5px 0; font-size:0.85rem; font-weight:600; color:var(--primary);">
+                🖼️ Take/Upload Photo:
+                <input type="file" name="image" accept="image/*" capture="environment">
+            </label>
+            
+            <button type="submit" class="btn-primary">Save to Inventory</button>
+        </form>
+    </div>
+
+    <div id="list">
+        <% items.forEach(item => { 
+            const days = Math.ceil((new Date(item.expiryDate) - new Date()) / (1000*60*60*24));
+        %>
+            <div class="item-card <%= days <= 3 ? 'urgent' : '' %>">
+                <img src="<%= item.imageUrl %>" class="prod-img">
+                <div style="flex-grow:1;">
+                    <b style="display:block;"><%= item.name %></b>
+                    <small style="color:#666;">Expires: <%= item.expiryDate.toDateString() %></small>
+                </div>
+                <form action="/delete" method="POST" style="margin:0;">
+                    <input type="hidden" name="id" value="<%= item._id %>">
+                    <button type="submit" style="background:none; border:none; cursor:pointer;">🗑️</button>
+                </form>
+            </div>
+        <% }) %>
+    </div>
+</div>
+
+<script>
+    // --- VOICE LOGIC ---
+    function startVoice() {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'en-IN';
+        recognition.onstart = () => { document.getElementById('micBtn').classList.add('listening'); };
+        recognition.onresult = (event) => {
+            const text = event.results[0][0].transcript.toLowerCase();
+            if(text.includes('add')) document.getElementById('pName').value = text.split('add')[1].trim();
+        };
+        recognition.onend = () => { document.getElementById('micBtn').classList.remove('listening'); };
+        recognition.start();
+    }
+
+    // --- SCANNER LOGIC ---
+    let scanner;
+    function toggleScanner() {
+        const r = document.getElementById('reader');
+        if(r.style.display === 'none') {
+            r.style.display = 'block';
+            scanner = new Html5Qrcode("reader");
+            scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, (txt) => {
+                document.getElementById('pName').value = "Barcode: " + txt;
+                scanner.stop(); r.style.display = 'none';
+            });
+        } else { scanner.stop(); r.style.display = 'none'; }
+    }
+</script>
+
+</body>
+</html>
